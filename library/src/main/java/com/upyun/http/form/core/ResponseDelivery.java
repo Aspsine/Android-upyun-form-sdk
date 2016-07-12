@@ -11,8 +11,8 @@ import com.upyun.http.form.api.UpYunApi;
  */
 public class ResponseDelivery extends Handler implements Delivery {
 
-    public ResponseDelivery() {
-        super(Looper.getMainLooper());
+    public ResponseDelivery(Looper looper) {
+        super(looper);
     }
 
     @Override

@@ -5,8 +5,8 @@ package com.upyun.http.form.demo;
  */
 public class Params {
 
-    public static final String BUCKET = "o2bra-static";
-    public static final String SAVE_KEY = "/assets/uploads/experience_reports/{filename}{.suffix}";
+    public static final String BUCKET = "*******";
+    public static final String SAVE_KEY = "***yourpath***/{filename}{.suffix}";
 
     public static final String ALLOW_FILE_TYPE = "jpg,jpeg,bmp,png,gif";
 

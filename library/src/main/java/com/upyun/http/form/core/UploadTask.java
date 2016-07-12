@@ -24,7 +24,9 @@ import java.net.ProtocolException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLEncoder;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Created by aspsine on 15/12/28.
@@ -114,7 +116,7 @@ public class UploadTask implements Runnable {
 
     private void transferData(HttpURLConnection connection) throws IOException, UpYunError {
         DataOutputStream dataOutputStream = null;
-        BufferedInputStream inputStream = null;
+        InputStream inputStream = null;
         try {
             dataOutputStream = new DataOutputStream(connection.getOutputStream());
 
@@ -127,12 +129,12 @@ public class UploadTask implements Runnable {
             final int code = connection.getResponseCode();
 
             if (code == HttpURLConnection.HTTP_OK) {
-                inputStream = (BufferedInputStream) connection.getInputStream();
+                inputStream = connection.getInputStream();
 
                 readResponse(inputStream);
             } else {
-                InputStream errorStream = connection.getErrorStream();
-                readErrorResponse(code, errorStream);
+                inputStream = connection.getErrorStream();
+                readErrorResponse(code, inputStream);
             }
         } finally {
             if (dataOutputStream != null) {
@@ -155,7 +157,7 @@ public class UploadTask implements Runnable {
         throw new UpYunError("code = " + code + " message=" + stringBuffer);
     }
 
-    private void readResponse(BufferedInputStream inputStream) throws IOException, UpYunError {
+    private void readResponse(InputStream inputStream) throws IOException, UpYunError {
         BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
         StringBuffer stringBuffer = new StringBuffer();
         String line = "";
@@ -163,12 +165,13 @@ public class UploadTask implements Runnable {
             checkCanceled();
             stringBuffer.append(line);
         }
-        mCallback.onSuccess(stringBuffer.toString());
+        mDelivery.onSuccess(stringBuffer.toString(), mCallback);
     }
 
     protected void configConnection(HttpURLConnection connection) throws ProtocolException {
         connection.setUseCaches(false);
         connection.setDoOutput(true);
+        connection.setChunkedStreamingMode(1024*4);
         connection.setRequestMethod("POST");
         connection.setConnectTimeout(CONNECT_TIME_OUT);
         connection.setReadTimeout(READ_TIME_OUT);
@@ -194,7 +197,14 @@ public class UploadTask implements Runnable {
 
     protected void writeFileFormParams(DataOutputStream dataOutputStream) throws IOException, UpYunError {
         Map<String, FileEntity> params = mMultiPartFormData.getFileParams();
-        for (String key : params.keySet()) {
+
+        Set<String> keySet = params.keySet();
+
+        Iterator<String> iterator = keySet.iterator();
+
+        while (iterator.hasNext()){
+
+            String key = iterator.next();
             FileEntity value = params.get(key);
 
             String fileName = value.getName();
@@ -207,20 +217,24 @@ public class UploadTask implements Runnable {
             writeFileBytes(dataOutputStream, file);
             dataOutputStream.writeBytes(END);
         }
+
         dataOutputStream.flush();
     }
 
 
     protected void writeFileBytes(DataOutputStream dataOutputStream, File file) throws IOException, UpYunError {
         FileInputStream inputStream = new FileInputStream(file);
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
+//        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        long length = file.length();
         byte[] buffer = new byte[1024 * 16];
         int count = -1;
+        int total = 0;
         while ((count = inputStream.read(buffer)) != -1) {
             checkCanceled();
-            out.write(buffer, 0, count);
+            dataOutputStream.write(buffer, 0, count);
+            total += count;
+            mDelivery.onProgress(total, length, mCallback);
         }
-        dataOutputStream.write(out.toByteArray());
         dataOutputStream.flush();
         inputStream.close();
     }

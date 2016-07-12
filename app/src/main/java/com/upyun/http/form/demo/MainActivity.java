@@ -24,7 +24,6 @@ import com.upyun.http.form.utils.TimeUtils;
 
 import java.io.File;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
@@ -91,18 +90,19 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         String expiration = TimeUtils.getExpiration(10 * 60 * 1000);
         String reportId = "1234";
 
-        Map<String, String> params = new HashMap<>();
-        params.put(UpYunConstants.Key.BUCKET, Params.BUCKET);
-        params.put(UpYunConstants.Key.SAVE_KEY, Params.SAVE_KEY);
-        params.put(UpYunConstants.Key.EXPIRATION, expiration);
+        // policy
+        Map<String, String> policyParams = new HashMap<>();
+        policyParams.put(UpYunConstants.Key.BUCKET, Params.BUCKET);
+        policyParams.put(UpYunConstants.Key.SAVE_KEY, Params.SAVE_KEY);
+        policyParams.put(UpYunConstants.Key.EXPIRATION, expiration);
+        policyParams.put(UpYunConstants.Key.NOTIFY_URL, Constants.NOTIFY_URL);
+        policyParams.put(UpYunConstants.Key.EXT_PARAM, reportId);
+        String policy = PolicyUtils.getPolicy(policyParams);
 
-        params.put(UpYunConstants.Key.NOTIFY_URL, Constants.NOTIFY_URL);
-        params.put(UpYunConstants.Key.EXT_PARAM, reportId);
-        Log.i("policy", "policy = " + params.toString());
-        String policy = PolicyUtils.getPolicy(params);
-
+        // signature
         String signature = MD5.md5(policy + "&" + Constants.API_KEY);
 
+        Map<String, String> params = new HashMap<>();
         params.put(UpYunConstants.Key.SIGNATURE, signature);
         params.put(UpYunConstants.Key.POLICY, policy);
 
@@ -126,9 +126,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
             @Override
             public void onProgress(long uploaded, long total) {
-                int progress = (int) ((uploaded / total) * 100);
-                setProgress(progress);
-                Log.i("onProgress", "uploaded = " + uploaded);
+                int progress = (int) ((uploaded / (float)total) * 100);
+                setDialogProgress(progress);
+                Log.i("onProgress", "uploaded = " + progress);
             }
 
             @Override
@@ -140,7 +140,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     private void setDialogProgress(int progress) {
-        if (0 <= progress && progress <= 100 && progress != mProgressDialog.getProgress()) {
+        if (0 <= progress && progress <= 100 && mProgressDialog.getProgress() != progress) {
             mProgressDialog.setProgress(progress);
             mProgressDialog.setMessage("正在上传 " + progress + "%");
         }

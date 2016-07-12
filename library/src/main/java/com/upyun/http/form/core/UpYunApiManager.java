@@ -1,5 +1,7 @@
 package com.upyun.http.form.core;
 
+import android.os.Looper;
+
 import com.upyun.http.form.api.OnCompleteListener;
 import com.upyun.http.form.api.UpYunApi;
 import com.upyun.http.form.entity.MultiPartFormData;
@@ -24,7 +26,7 @@ public class UpYunApiManager implements UpYunApi {
 
     private final ResponseDelivery mDelivery;
 
-    private final OnCompleteListener mCompelteCallback;
+    private final OnCompleteListener mCompleteCallback;
 
     public static UpYunApiManager getInstance() {
         if (sInstance == null) {
@@ -38,10 +40,10 @@ public class UpYunApiManager implements UpYunApi {
     }
 
     private UpYunApiManager() {
-        mDelivery = new ResponseDelivery();
+        mDelivery = new ResponseDelivery(Looper.getMainLooper());
         mTaskMap = new LinkedHashMap<>();
         mExecutor = Executors.newFixedThreadPool(MAX_THREAD_NUM);
-        mCompelteCallback = new OnCompleteListener() {
+        mCompleteCallback = new OnCompleteListener() {
             @Override
             public void onComplete(Object tag) {
                 mTaskMap.remove(tag);
@@ -55,7 +57,7 @@ public class UpYunApiManager implements UpYunApi {
             mTaskMap.get(tag).cancel();
             mTaskMap.remove(tag);
         }
-        UploadTask task = new UploadTask(url, multiPartFormData, mDelivery,callback, tag, mCompelteCallback);
+        UploadTask task = new UploadTask(url, multiPartFormData, mDelivery,callback, tag, mCompleteCallback);
         mExecutor.execute(task);
     }
 
